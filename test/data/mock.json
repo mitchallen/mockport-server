@@ -1,0 +1,126 @@
+[
+    {
+        "request": {
+            "method": "GET",
+            "url": "/api/login?foo=bar&message=ping"
+        },
+        "response": {
+            "status": 201,
+            "body": {
+                "message": "pong"
+            }
+        }
+    },
+    {
+        "request": {
+            "method": "GET",
+            "url": "/dogs/1"
+        },
+        "response": {
+            "status": 200,
+            "body": {
+                "id": 1,
+                "name": "Pepper"
+            }
+        }
+    },
+    {
+        "request": {
+            "method": "POST",
+            "url": "/dogs"
+        },
+        "response": {
+            "status": 201,
+            "body": {
+                "id": 5,
+                "name": "Bluey"
+            }
+        }
+    },
+    {
+        "request": {
+            "method": "PUT",
+            "url": "/dogs/8"
+        },
+        "response": {
+            "status": 204,
+            "body": {
+                "id": 6,
+                "name": "Desi"
+            }
+        }
+    },
+    {
+        "request": {
+            "method": "PATCH",
+            "url": "/dogs/1"
+        }
+    },
+    {
+        "request": {
+            "method": "PATCH",
+            "url": "/dogs/2"
+        },
+        "response": {
+            "status": 401
+        }
+    },
+    {
+        "request": {
+            "method": "PATCH",
+            "url": "/dogs/3"
+        },
+        "response": {
+            "status": 403,
+            "body": {
+                "error": "Forbidden - you are not authorized"
+            }
+        }
+    },
+    {
+        "request": {
+            "method": "PATCH",
+            "url": "/dogs/4"
+        },
+        "response": {
+            "body": {
+                "message": "no status should be 204 (no content)"
+            }
+        }
+    },
+    {
+        "request": {
+            "method": "DELETE",
+            "url": "/dogs/5"
+        },
+        "response": {
+            "status": 204
+        }
+    },
+    {
+        "request": {
+            "method": "GET",
+            "url": "/dogs/2"
+        },
+        "response": {
+            "status": 200,
+            "body": {
+                "id": 2,
+                "name": "Marchio"
+            }
+        }
+    },
+    {
+        "request": {
+            "method": "GET",
+            "url": "/dogs/3"
+        },
+        "response": {
+            "status": 200,
+            "body": {
+                "id": 3,
+                "name": "Richmond"
+            }
+        }
+    }
+]

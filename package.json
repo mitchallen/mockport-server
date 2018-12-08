@@ -1,0 +1,53 @@
+{
+  "name": "mockport-server",
+  "version": "0.0.1",
+  "description": "A mock port server for testing HTTP requests.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:animal": "MOCKFILE=./data/animal.json node src/index.js",
+    "test": "mocha test/unit --recursive --timeout 20000",
+    "test:server:docker": "TEST_MOCKPORT_HOST=http://localhost:7777 mocha test/server --recursive --timeout 20000",
+    "test:server:local": "TEST_MOCKPORT_HOST=http://localhost:3002 mocha test/server --recursive --timeout 20000",
+    "test:coverage": "./node_modules/.bin/istanbul cover _mocha -- -R spec test/**/*",
+    "docker:build": "docker build -t mitchallen/mockport-server .",
+    "docker:run": "docker run -d -p 7777:3002 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server",
+    "docker:start": "docker start mockport-server",
+    "docker:stop": "docker stop mockport-server",
+    "docker:rm": "docker rm mockport-server",
+    "docker:stopped": "docker ps -f \"status=exited\""
+  },
+  "keywords": [
+    "testing",
+    "TDD",
+    "mock",
+    "automation",
+    "sqa",
+    "qa",
+    "mocha",
+    "chai",
+    "nock",
+    "ngrok",
+    "axios",
+    "sinon",
+    "REST",
+    "loopback"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mitchallen/mockport-server.git"
+  },
+  "author": "Mitch Allen <npm@mitchallen.com> (http://mitchallen.com)",
+  "license": "MIT",
+  "dependencies": {
+    "@mitchallen/uptime": "0.0.6",
+    "express": "^4.16.4",
+    "lokijs": "^1.5.5"
+  },
+  "devDependencies": {
+    "istanbul": "^0.4.5",
+    "mocha": "^5.2.0",
+    "should": "^13.2.3",
+    "supertest": "^3.3.0"
+  }
+}
