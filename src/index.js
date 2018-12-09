@@ -3,7 +3,7 @@ const mockPort = require('./mockport'),
     fs = require("fs")
 
 const APP_NAME = 'mockport-server';
-const APP_VERSION = '0.0.2';
+const APP_VERSION = require("./../package").version;
 const PORT = process.env.PORT || 1234;
 
 const MOCKFILE = process.env.MOCKFILE || './data/mock.json';
