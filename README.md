@@ -30,7 +30,7 @@ Cut and paste some of the sample curl commands from the console into another ter
 
 For example, to issue one of the GET requests:
 
-    curl "http://localhost:3002/pets/1"
+    curl "http://localhost:1234/pets/1"
     
 
 ### Test locally with a different mockfile
@@ -69,13 +69,37 @@ This will pull the image down from the repo if you didn't already.
 
 This example runs the server locally on port 7777.
 
-    docker run -d -p 7777:3002 ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport
+Remove -d to monitor console
+
+    docker run -d -p 7777:1234 ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport
+
+### Reattach to a container
+
+Unless you remove the container you can't run it again.
+
+You have to use the start command.
+
+Use -a to attach to the console to monitor output
+
+    docker start -a mockport-server
 
 ### Rerun with the same or a new container
 
     docker stop mockport-server
     docker rm mockport-server
-    docker run -d -p 7777:3002 ${PWD}/test/data:/usr/src/app/data  --name mockport-server mitchallen/mockport
+    docker run -d -p 7777:1234 ${PWD}/test/data:/usr/src/app/data  --name mockport-server mitchallen/mockport
+
+### Mock two containers
+
+This will pull the image down from the repo if you didn't already.
+
+This example runs the two servers on 7001 and 7001
+
+    docker run -p 7001:1234 ${PWD}/test/data/srv1:/usr/src/app/data --name mock1 mitchallen/mockport
+
+Open another terminal window to monitor the second container.
+
+    docker run -p 7002:1234 ${PWD}/test/data/srv2:/usr/src/app/data --name mock2 mitchallen/mockport
 
 ### Confirm image is running
 

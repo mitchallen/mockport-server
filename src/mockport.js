@@ -1,6 +1,7 @@
 "use strict";
 
 const express = require('express'),
+    cors = require('cors'),
     os = require('os');
 
 const HOST = os.hostname();
@@ -58,6 +59,8 @@ module.exports.listen = (spec) => {
     }
 
     const app = express();
+
+    app.use(cors());
 
     app.use(express.json());
 

@@ -1,6 +1,6 @@
 {
   "name": "mockport-server",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A mock port server for testing HTTP requests.",
   "main": "src/index.js",
   "scripts": {
@@ -8,10 +8,10 @@
     "start:animal": "MOCKFILE=./data/animal.json node src/index.js",
     "test": "mocha test/unit --recursive --timeout 20000",
     "test:server:docker": "TEST_MOCKPORT_HOST=http://localhost:7777 mocha test/server --recursive --timeout 20000",
-    "test:server:local": "TEST_MOCKPORT_HOST=http://localhost:3002 mocha test/server --recursive --timeout 20000",
+    "test:server:local": "TEST_MOCKPORT_HOST=http://localhost:1234 mocha test/server --recursive --timeout 20000",
     "test:coverage": "./node_modules/.bin/istanbul cover _mocha -- -R spec test/**/*",
     "docker:build": "docker build -t mitchallen/mockport-server .",
-    "docker:run": "docker run -d -p 7777:3002 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server",
+    "docker:run": "docker run -d -p 7777:1234 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server",
     "docker:start": "docker start mockport-server",
     "docker:stop": "docker stop mockport-server",
     "docker:rm": "docker rm mockport-server",
@@ -45,6 +45,7 @@
     "lokijs": "^1.5.5"
   },
   "devDependencies": {
+    "cors": "^2.8.5",
     "istanbul": "^0.4.5",
     "mocha": "^5.2.0",
     "should": "^13.2.3",
