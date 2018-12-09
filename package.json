@@ -1,6 +1,6 @@
 {
   "name": "mockport-server",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A mock port server for testing HTTP requests.",
   "main": "src/index.js",
   "scripts": {
@@ -40,7 +40,7 @@
   "author": "Mitch Allen <npm@mitchallen.com> (http://mitchallen.com)",
   "license": "MIT",
   "dependencies": {
-    "@mitchallen/uptime": "0.0.6",
+    "@mitchallen/uptime": "0.0.8",
     "express": "^4.16.4",
     "lokijs": "^1.5.5"
   },
