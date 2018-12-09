@@ -9,8 +9,7 @@ const PORT = process.env.PORT || 1234;
 const MOCKFILE = process.env.MOCKFILE || './data/mock.json';
 
 var contents = fs.readFileSync(`${MOCKFILE}`);
-// Define to JSON type
- var mockData = JSON.parse(contents);
+var mockData = JSON.parse(contents);
 
 const options = {
     app: APP_NAME,
@@ -22,4 +21,3 @@ const options = {
 }
 
 mockPort.listen(options);
-
