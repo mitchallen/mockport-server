@@ -17,6 +17,7 @@ const options = {
     version: APP_VERSION,
     service: "myapi",
     port: PORT,
+    headers: true,
     mocks: mockData
 }
 
