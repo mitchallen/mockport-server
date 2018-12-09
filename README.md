@@ -55,7 +55,7 @@ Before running the contain, create __test/data__ in your current folder.
 
 Create the file __test/data/mock.json__
 
-Run the container and the mocks should be piked up from your file.
+Run the container and the mocks should be picked up from your file.
 
 See the example in the repo for what a mock.json file should look like.
 
