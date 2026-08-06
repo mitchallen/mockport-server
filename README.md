@@ -240,6 +240,10 @@ __Settings > Secrets and variables > Actions__:
 Until `DOCKERHUB_TOKEN` is set the job skips with a notice instead of failing, so
 tagging a release will not produce a red build.
 
+To check the credentials without publishing, run the workflow by hand from the
+__Actions__ tab (or `gh workflow run publish.yml`). A manual run is a dry run —
+it logs in and builds both architectures, but only a `v*` tag actually pushes.
+
 #### Publishing by hand
 
     npm run docker:build
