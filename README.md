@@ -446,18 +446,23 @@ Pull from either registry:
 #### One-time setup
 
 GHCR needs no configuration — it authenticates with the built-in `GITHUB_TOKEN`.
-One caveat: a GHCR package is **private on first publish**. To allow anonymous
-`docker pull`, open the package from the repo's __Packages__ sidebar and set
-__Package settings > Danger Zone > Change visibility__ to public. That is a
-one-time step; later pushes keep the setting.
+The package inherited the repository's public visibility on its first publish,
+so anonymous `docker pull` works. If a future package ever lands private,
+flip it under __Packages > Package settings > Change visibility__.
 
 Docker Hub needs credentials, under
 __Settings > Secrets and variables > Actions__:
 
 | Name | Kind | Value |
 | --- | --- | --- |
-| `DOCKERHUB_TOKEN` | secret | A Docker Hub access token with Read/Write scope |
+| `DOCKERHUB_TOKEN` | secret | A Docker Hub access token — see the scope note below |
 | `DOCKERHUB_USERNAME` | variable | Docker Hub account (optional, defaults to `mitchallen`) |
+
+Pushing images needs only **Read/Write** scope. Syncing the description needs
+**Read/Write/Delete** — a read/write token gets `403 Forbidden` on that endpoint,
+which is exactly how `v0.1.2` failed. That step is therefore `continue-on-error`:
+the images and the Release still go out, and the Docker Hub description simply
+stays as it was. Widen the token's scope if you want the sync to work.
 
 Until `DOCKERHUB_TOKEN` is set that job skips with a notice instead of failing,
 so tagging a release will not produce a red build — and GHCR still publishes.

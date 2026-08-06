@@ -166,8 +166,15 @@ jobs:
 
       # Docker Hub's description is not derived from the repo, so it goes stale
       # silently unless something pushes it. Only worth doing on a real publish.
+      #
+      # continue-on-error because this needs a token with read/write/DELETE
+      # scope - a plain read/write token pushes images fine but gets 403
+      # Forbidden on the description endpoint, which is how v0.1.2 failed.
+      # The description is cosmetic; failing the job over it would skip the
+      # release job and leave a published tag with no GitHub Release.
       - name: Sync the README to Docker Hub
         if: steps.creds.outputs.present == 'true' && github.ref_type == 'tag'
+        continue-on-error: true
         uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ vars.DOCKERHUB_USERNAME || 'mitchallen' }}
