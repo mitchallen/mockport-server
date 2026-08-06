@@ -7,7 +7,7 @@ A mock port server for testing HTTP requests.
 [![Docker image size](https://img.shields.io/docker/image-size/mitchallen/mockport-server/latest?logo=docker&label=image%20size)](https://hub.docker.com/r/mitchallen/mockport-server/tags/)
 [![Docker pulls](https://img.shields.io/docker/pulls/mitchallen/mockport-server?logo=docker)](https://hub.docker.com/r/mitchallen/mockport-server/)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License: MIT](https://img.shields.io/github/license/mitchallen/mockport-server)](LICENSE)
 
 ## Usage
 
@@ -396,4 +396,9 @@ Docker Hub page for this image's tags
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
+
+The license covers this project's own code. It does not apply to any third
+party assets that were imported into the project as a utility or for
+demonstration purposes; contact the authors of those assets for their
+licensing information.
