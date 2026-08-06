@@ -17,8 +17,9 @@ There are two ways to use this project
 
 ## Running Locally
 
-To run locally:
+Requires Node.js 20 or later.
 
+	npm install
 	npm start
 	
 This will echo the default mocks requests as curl commands.
@@ -40,17 +41,59 @@ For example, to issue one of the GET requests:
 
 * * *
 
+## Mock file format
+
+A mockfile is a JSON array of request/response pairs:
+
+```json
+[
+    {
+        "request": {
+            "method": "GET",
+            "url": "/pets/1"
+        },
+        "response": {
+            "status": 200,
+            "body": { "id": 1, "name": "Pepper" }
+        }
+    }
+]
+```
+
+Notes on matching and defaults:
+
+* `request.url` is matched **exactly**, including any query string. `/api/login?foo=bar` will not match a mock registered as `/api/login`.
+* A `HEAD` route is registered automatically for every non-`HEAD` mock, so `curl -I` reports a sensible status.
+* If `response.status` is omitted, a per-method default is used: `GET`/`HEAD` → 200, `POST` → 201, `PUT`/`PATCH`/`DELETE` → 204.
+* A 204 status never returns a body, even if one is defined — that is what the `/pets/4` entry in `data/mock.json` demonstrates.
+* Anything unmatched returns 404.
+
+* * *
+
+## Development
+
+Install dependencies and run the unit tests:
+
+	npm install
+	npm test
+
+With coverage:
+
+	npm run test:coverage
+
+* * *
+
 ## Running as a Docker Container
 
 ### Use a different mockfile
 
-By fault the server will use its internal file:
+By default the server will use its internal file:
 
 	/usr/src/app/data/mock.json
 	
 The run command below shows how to map that folder to a local folder called **test/data**.
 
-Before running the contain, create __test/data__ in your current folder.
+Before running the container, create __test/data__ in your current folder.
 
 Create the file __test/data/mock.json__
 
@@ -63,6 +106,10 @@ See the example in the repo for what a mock.json file should look like.
 ### Pull the image from the repo
 
     docker pull mitchallen/mockport-server:latest
+
+### Build the image locally
+
+    npm run docker:build
 
 ### Run the image locally as a container
 
@@ -79,17 +126,17 @@ __You will need to change the port in the examples echoed to the docker console.
 
 This example runs the server locally on port 7777 in the background.
 
-    docker run -d -p 7777:1234 ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport
+    docker run -d -p 7777:1234 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server
     
 * * *
     
 #### Run in the foreground
 
-This example runs the server locally on port 7777 in the background.
+This example runs the server locally on port 7777 in the foreground.
 
-It removes -d flag to monitor the console.
+It removes the -d flag to monitor the console.
 
-    docker run -p 7777:1234 ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport
+    docker run -p 7777:1234 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server
     
 * * *
 
@@ -109,7 +156,7 @@ Use __-a__ flag to attach to the console to monitor output
 
     docker stop mockport-server
     docker rm mockport-server
-    docker run -d -p 7777:1234 ${PWD}/test/data:/usr/src/app/data  --name mockport-server mitchallen/mockport
+    docker run -d -p 7777:1234 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server
 
 * * *
 
@@ -154,50 +201,42 @@ Assumes container is running and set to port 7777.
 
 This example runs the two servers on ports 7001 and 7002.
 
-    docker run -p 7001:1234 ${PWD}/test/data/srv1:/usr/src/app/data --name mock1 mitchallen/mockport
+    docker run -p 7001:1234 -v ${PWD}/test/data/srv1:/usr/src/app/data --name mock1 mitchallen/mockport-server
 
 Open another terminal window to monitor the second container.
 
-    docker run -p 7002:1234 ${PWD}/test/data/srv2:/usr/src/app/data --name mock2 mitchallen/mockport
+    docker run -p 7002:1234 -v ${PWD}/test/data/srv2:/usr/src/app/data --name mock2 mitchallen/mockport-server
     
-They will look for and use these two files on you host machine:
+They will look for and use these two files on your host machine:
 
     ${PWD}/test/data/srv1/mock.json
     ${PWD}/test/data/srv2/mock.json
     
 * * *
 
-### Automated Docker Builds
+### Publishing the Docker image
 
-New builds of the image are created automatically using Docker Cloud.
+Earlier versions of this project were built automatically by Docker Cloud, which
+Docker shut down in 2021. There is currently no automated publish step — CI
+builds the image and verifies it serves mocks, but does not push it.
 
-To trigger a new build via a github tag I do the following (using v1.0.6 as an example):
+To publish a new image manually:
 
-*NOTE: using annotated tags didn't trigger a new build. Use the simpler format.*
-
-Tags must match this format to trigger a build: /v[0-9.]+$/ 
-
-    git checkout master
-    git tag v1.0.6
-    git push origin --tags
-
-This triggers two new builds of the Docker image: __v1.0.6__ and __latest__
-
-Docker Cloud:
-
-* https://cloud.docker.com
-
-My Docker Hub page:
-
-* https://hub.docker.com/u/mitchallen/
+    npm run docker:build
+    docker tag mitchallen/mockport-server mitchallen/mockport-server:v1.0.6
+    docker push mitchallen/mockport-server:v1.0.6
+    docker push mitchallen/mockport-server:latest
 
 Docker Hub page for this image
 
 * https://hub.docker.com/r/mitchallen/mockport-server/
 
-Docker Hub page for this images tags
+Docker Hub page for this image's tags
 
 * https://hub.docker.com/r/mitchallen/mockport-server/tags/
 
 * * *
 
+## License
+
+MIT

@@ -6,8 +6,6 @@ const express = require('express'),
 
 const HOST = os.hostname();
 
-const mocks = {}
-
 const httpMethod = {
     "HEAD": { curl: `-I`, status: 200 },    // TODO - status based on method?
     "GET": { curl: `-i -X GET -H "Accept: applications/json"`, status: 200 },
@@ -17,18 +15,13 @@ const httpMethod = {
     "DELETE": { curl: `-i -X DELETE -H "Content-Type: application/json"`, status: 204 }
 }
 
-module.exports.listen = (spec) => {
-
-    spec = spec || {};
-    const appName = spec.app || 'mockport';
-    const version = spec.version;
-    const service = spec.service; // TODO what if param missing
-    const port = spec.port;   // TODO what if param missing
-    const showHeaders = spec.headers || false;
-    const notFoundStatus = spec.notFoundStatus || 404;
+// Builds the mock lookup table, keyed by "METHOD|url".
+function buildMocks(spec, log) {
+    const mocks = {};
+    const port = spec.port;
 
     function logMock(method, mock) {
-        console.log(
+        log(
             `[${method}]: curl ${httpMethod[method].curl}`
             + ` "http://localhost:${port}${mock.request.url}"`
         );
@@ -46,7 +39,7 @@ module.exports.listen = (spec) => {
             methods.forEach(method => {
                 const key = `${method}|${mock.request.url}`;
                 logMock(method, mock);
-                if( mock.response ) {
+                if (mock.response) {
                     mocks[key] = {
                         status: mock.response.status,
                         body: mock.response.body
@@ -58,13 +51,30 @@ module.exports.listen = (spec) => {
         });
     }
 
+    return mocks;
+}
+
+// Creates the configured express app without binding a port.
+// Exported separately so tests can drive it via supertest.
+module.exports.createApp = (spec) => {
+
+    spec = spec || {};
+    const service = spec.service; // TODO what if param missing
+    const showHeaders = spec.headers || false;
+    const notFoundStatus = spec.notFoundStatus || 404;
+    const log = spec.log || console.log;
+
+    const mocks = buildMocks(spec, log);
+
     const app = express();
 
     app.use(cors());
 
     app.use(express.json());
 
-    app.all('*', (req, res) => {
+    // Express 5 (path-to-regexp 8) no longer accepts a bare '*' wildcard;
+    // named wildcards are required.
+    app.all('/*splat', (req, res) => {
         const request = {};
         request.service = service;
         request.method = req.method;
@@ -74,26 +84,30 @@ module.exports.listen = (spec) => {
         request.host = req.headers["host"];
         request.url = req.url;
         request.path = req.path;
-        if (Object.keys(req.query).length) {
+        if (req.query && Object.keys(req.query).length) {
             request.query = JSON.stringify(req.query);
         }
-        if (Object.keys(req.body).length) {
+        // Express 5 leaves req.body undefined when no body parser matched.
+        if (req.body && Object.keys(req.body).length) {
             request.body = JSON.stringify(req.body);
         }
-        console.log('--');
-        console.log(request);
+        log('--');
+        log(request);
         // Generate Mock Response - if available
         const key = `${req.method}|${req.url}`;
         var reply = mocks[key];
         if (reply) {
-            const status = reply.status ? reply.status : httpMethod[req.method].status;
-            console.log(status);
+            const fallback = httpMethod[req.method]
+                ? httpMethod[req.method].status
+                : 200;
+            const status = reply.status ? reply.status : fallback;
+            log(status);
             if (status == 204) {
                 // Not returning data
                 res.status(status).send();
             } else {
                 if (reply.body) {
-                    console.log(reply.body);
+                    log(reply.body);
                     res
                         .status(status)
                         .json(reply.body);
@@ -102,17 +116,28 @@ module.exports.listen = (spec) => {
                 }
             }
         } else {
-            console.log(notFoundStatus);
+            log(notFoundStatus);
             res
                 .status(notFoundStatus)
                 .json()
         }
     });
 
-    app.listen(port, () => {
-        console.log(`[HOST:${HOST}]:${appName}:${version} - [${service}] listening on port ${port}!`)
+    return app;
+}
+
+module.exports.listen = (spec) => {
+
+    spec = spec || {};
+    const appName = spec.app || 'mockport';
+    const version = spec.version;
+    const service = spec.service;
+    const port = spec.port;   // TODO what if param missing
+    const log = spec.log || console.log;
+
+    const app = module.exports.createApp(spec);
+
+    return app.listen(port, () => {
+        log(`[HOST:${HOST}]:${appName}:${version} - [${service}] listening on port ${port}!`)
     });
-
-
-
 }
