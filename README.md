@@ -217,10 +217,30 @@ They will look for and use these two files on your host machine:
 ### Publishing the Docker image
 
 Earlier versions of this project were built automatically by Docker Cloud, which
-Docker shut down in 2021. There is currently no automated publish step — CI
-builds the image and verifies it serves mocks, but does not push it.
+Docker shut down in 2021. Publishing now runs in GitHub Actions
+(`.github/workflows/publish.yml`), triggered by a version tag:
 
-To publish a new image manually:
+    git checkout master
+    git tag v1.0.6
+    git push origin --tags
+
+That runs the tests, then builds and pushes `linux/amd64` and `linux/arm64`
+images tagged `1.0.6`, `1.0` and `latest`.
+
+#### One-time setup
+
+The workflow needs Docker Hub credentials, under
+__Settings > Secrets and variables > Actions__:
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `DOCKERHUB_TOKEN` | secret | A Docker Hub access token with Read/Write scope |
+| `DOCKERHUB_USERNAME` | variable | Docker Hub account (optional, defaults to `mitchallen`) |
+
+Until `DOCKERHUB_TOKEN` is set the job skips with a notice instead of failing, so
+tagging a release will not produce a red build.
+
+#### Publishing by hand
 
     npm run docker:build
     docker tag mitchallen/mockport-server mitchallen/mockport-server:v1.0.6

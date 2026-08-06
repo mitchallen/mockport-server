@@ -1,0 +1,98 @@
+name: Publish image
+
+# Publishes to Docker Hub on a version tag, matching the tag format the
+# README documents:
+#
+#     git tag v1.0.6
+#     git push origin --tags
+#
+# Requires two repository settings under Settings > Secrets and variables > Actions:
+#   secret   DOCKERHUB_TOKEN     - a Docker Hub access token with Read/Write
+#   variable DOCKERHUB_USERNAME  - the Docker Hub account (defaults to mitchallen)
+#
+# Until the secret exists the job skips with a message rather than failing,
+# so tagging a release never reports a spurious red build.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  IMAGE: mitchallen/mockport-server
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check for Docker Hub credentials
+        id: creds
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DOCKERHUB_TOKEN is not set - skipping publish. Add it under Settings > Secrets and variables > Actions to enable pushing."
+          fi
+
+      # Re-verify the image before it ships. CI already does this on the
+      # branch, but a tag can point at any commit.
+      - uses: actions/setup-node@v7
+        if: steps.creds.outputs.present == 'true'
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Run tests
+        if: steps.creds.outputs.present == 'true'
+        run: |
+          npm ci
+          npm test
+
+      - name: Set up QEMU
+        if: steps.creds.outputs.present == 'true'
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Buildx
+        if: steps.creds.outputs.present == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        if: steps.creds.outputs.present == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME || 'mitchallen' }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Derive tags
+        if: steps.creds.outputs.present == 'true'
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          # v1.0.6 produces 1.0.6, 1.0, and latest.
+          # is_default_branch is false on a tag push, so latest is gated on
+          # ref_type instead.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+
+      - name: Build and push
+        if: steps.creds.outputs.present == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
