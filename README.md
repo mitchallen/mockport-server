@@ -2,9 +2,12 @@
 
 A mock port server for testing HTTP requests.
 
-<a href="https://hub.docker.com/r/mitchallen/mockport-server/">
-<img src="https://img.shields.io/badge/mitchallen-mockport--server-green.svg?logo=docker&style=for-the-badge" />
-</a>
+[![CI](https://github.com/mitchallen/mockport-server/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mitchallen/mockport-server/actions/workflows/ci.yml)
+[![Docker image version](https://img.shields.io/docker/v/mitchallen/mockport-server?sort=semver&logo=docker&label=docker%20hub)](https://hub.docker.com/r/mitchallen/mockport-server/tags/)
+[![Docker image size](https://img.shields.io/docker/image-size/mitchallen/mockport-server/latest?logo=docker&label=image%20size)](https://hub.docker.com/r/mitchallen/mockport-server/tags/)
+[![Docker pulls](https://img.shields.io/docker/pulls/mitchallen/mockport-server?logo=docker)](https://hub.docker.com/r/mitchallen/mockport-server/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ## Usage
 
@@ -35,8 +38,26 @@ For example, to issue one of the GET requests:
 
 ### Test locally with a different mockfile
 
+The mockfile is chosen with the `MOCKFILE` environment variable, which defaults
+to `./data/mock.json`. The repo ships a second mockfile, `data/animal.json`, and
+a script that uses it:
+
+	npm run start:animal
+
+which is the same as:
 
 	MOCKFILE=./data/animal.json node src/index.js
+
+### Environment variables
+
+| Name | Default | Purpose |
+| --- | --- | --- |
+| `MOCKFILE` | `./data/mock.json` | Path to the mockfile to serve |
+| `PORT` | `1234` | Port the server listens on |
+
+For example, to serve the animal mocks on port 4321:
+
+	MOCKFILE=./data/animal.json PORT=4321 npm start
     
 
 * * *
@@ -67,6 +88,18 @@ Notes on matching and defaults:
 * If `response.status` is omitted, a per-method default is used: `GET`/`HEAD` → 200, `POST` → 201, `PUT`/`PATCH`/`DELETE` → 204.
 * A 204 status never returns a body, even if one is defined — that is what the `/pets/4` entry in `data/mock.json` demonstrates.
 * Anything unmatched returns 404.
+* Every request is echoed to the console — method, host, url, path, and any query string, body, or headers — so you can see exactly what the client under test sent.
+* CORS is enabled for all origins, so a browser-based client can call the mock server directly.
+
+### Mockfiles in the repo
+
+| File | Mocks | Used by |
+| --- | --- | --- |
+| `data/mock.json` | `/pets/*` | `npm start`, and the image's built-in default |
+| `data/animal.json` | `/animals/*` | `npm run start:animal` |
+| `test/data/mock.json` | `/dogs/*` | the sample volume mount in the docker examples below |
+
+All three are exercised by the test suite, so they cannot drift out of sync with the server.
 
 * * *
 
@@ -81,9 +114,19 @@ With coverage:
 
 	npm run test:coverage
 
+CI (`.github/workflows/ci.yml`) runs on every push to `main` and every pull
+request. It runs the tests on Node 20, 22 and 24, fails the build on an
+`npm audit` finding of moderate or higher, and builds the Docker image and
+curls a mock out of the running container.
+
 * * *
 
 ## Running as a Docker Container
+
+The published image is built for `linux/amd64` and `linux/arm64`, runs as the
+unprivileged `node` user, and declares a `HEALTHCHECK` — so `docker ps` reports
+the container as healthy once the server answers. (The healthcheck hits an
+unmocked path and accepts the 404: any HTTP response means the server is up.)
 
 ### Use a different mockfile
 
@@ -100,6 +143,10 @@ Create the file __test/data/mock.json__
 Run the container and the mocks should be picked up from your file.
 
 See the example in the repo for what a mock.json file should look like.
+
+Note that the copy in this repo, `test/data/mock.json`, mocks `/dogs/*` rather
+than the `/pets/*` of the built-in file — that is how the examples below make it
+obvious which mockfile the container actually picked up.
 
 * * *
 
@@ -168,8 +215,14 @@ Use __-a__ flag to attach to the console to monitor output
 
 ### Test with curl commands
 
-Assumes container is running and set to port 7777.
- 
+Assumes the container is running and mapped to port 7777.
+
+With the `test/data` volume mounted, as in the run examples above:
+
+    curl http://localhost:7777/dogs/1
+
+Without a volume mount the container serves its built-in `data/mock.json`:
+
     curl http://localhost:7777/pets/1
 
 * * *
@@ -220,12 +273,14 @@ Earlier versions of this project were built automatically by Docker Cloud, which
 Docker shut down in 2021. Publishing now runs in GitHub Actions
 (`.github/workflows/publish.yml`), triggered by a version tag:
 
-    git checkout master
-    git tag v1.0.6
+    git checkout main
+    git tag v0.1.1
     git push origin --tags
 
 That runs the tests, then builds and pushes `linux/amd64` and `linux/arm64`
-images tagged `1.0.6`, `1.0` and `latest`.
+images tagged `0.1.1`, `0.1` and `latest`. Keep the tag in step with the
+`version` in `package.json` — the server echoes that version on startup. The
+most recent release is `v0.1.0`.
 
 #### One-time setup
 
@@ -247,8 +302,8 @@ it logs in and builds both architectures, but only a `v*` tag actually pushes.
 #### Publishing by hand
 
     npm run docker:build
-    docker tag mitchallen/mockport-server mitchallen/mockport-server:v1.0.6
-    docker push mitchallen/mockport-server:v1.0.6
+    docker tag mitchallen/mockport-server mitchallen/mockport-server:0.1.1
+    docker push mitchallen/mockport-server:0.1.1
     docker push mitchallen/mockport-server:latest
 
 Docker Hub page for this image
