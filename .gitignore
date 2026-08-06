@@ -1,27 +1,29 @@
+# Dependencies
+node_modules/
+
+# Test / coverage output
+coverage/
+.nyc_output/
+*.lcov
+
+# Credentials - never commit registry auth
+.npmrc
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+
+# Editors
 .vs/
+.vscode/
+.idea/
+*.swp
 
-Packages/
-
-**/bin/*
-**/obj/*
-
-# =============== #
-# Unity generated #
-# =============== #
-Temp/
-Library/
-
-# ===================================== #
-# Visual Studio / MonoDevelop generated #
-# ===================================== #
-ExportedObj/
-obj/
-*.svd
-*.userprefs
-/*.csproj
-*.pidb
-*.suo
-/*.sln
-*.user
-*.unityproj
-*.booproj
+# OS
+.DS_Store
+Thumbs.db

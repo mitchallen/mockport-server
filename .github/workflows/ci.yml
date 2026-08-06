@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - run: npm ci
+
+      - name: Fail on known vulnerabilities
+        run: npm audit --audit-level=moderate
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t mockport-server:ci .
+
+      - name: Run container and verify it serves mocks
+        run: |
+          docker run -d -p 7777:1234 --name mockport-ci mockport-server:ci
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://localhost:7777/pets/1; then
+              echo "server is up"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "server did not come up in time"
+              docker logs mockport-ci
+              exit 1
+            fi
+            sleep 1
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7777/pets/1)
+          test "$code" = "200" || { docker logs mockport-ci; exit 1; }
+          docker rm -f mockport-ci
