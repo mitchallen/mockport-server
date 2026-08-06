@@ -95,6 +95,57 @@ Notes on matching and defaults:
 * Every request is echoed to the console — method, host, url, path, and any query string, body, or headers — so you can see exactly what the client under test sent.
 * CORS is enabled for all origins, so a browser-based client can call the mock server directly.
 
+### Trying a mock with curl
+
+That `/pets/1` entry is the first mock in `data/mock.json`, so with the server
+running (`npm start`, or `make start`) it answers on port 1234. Piping the
+response through [`jq`](https://jqlang.org/) pretty-prints it:
+
+    curl -s http://localhost:1234/pets/1 | jq
+
+```json
+{
+  "id": 1,
+  "name": "Pepper"
+}
+```
+
+`-s` silences curl's progress meter, which would otherwise be interleaved with
+the body and confuse `jq`.
+
+Mocks are matched on method and url only, so a `POST` gets back whatever the
+mockfile says regardless of what you send — the request body is echoed to the
+server console rather than used for matching:
+
+    curl -s -X POST http://localhost:1234/pets \
+        -H 'Content-Type: application/json' \
+        -d '{"name":"Bluey"}' | jq
+
+```json
+{
+  "id": 5,
+  "name": "Bluey"
+}
+```
+
+Error mocks come back the same way:
+
+    curl -s -X PATCH http://localhost:1234/pets/3 | jq
+
+```json
+{
+  "error": "Forbidden - you are not authorized"
+}
+```
+
+Since `jq` only ever sees the body, use `-w` when the status code is the point —
+a 204 or a bare `response.status` mock has no body to print:
+
+    curl -s -o /dev/null -w '%{http_code}\n' -X DELETE http://localhost:1234/pets/5
+    204
+
+Or `-i` to see the headers and the body together.
+
 ### Mockfiles in the repo
 
 | File | Mocks | Used by |
