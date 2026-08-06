@@ -1,17 +1,27 @@
 name: Publish image
 
-# Publishes to Docker Hub on a version tag, matching the tag format the
-# README documents:
+# Publishes on a version tag, matching the tag format the README documents:
 #
-#     git tag v1.0.6
-#     git push origin --tags
+#     make tag VERSION=0.1.2
+#     git push origin v0.1.2
 #
-# Requires two repository settings under Settings > Secrets and variables > Actions:
+# A tag push does three things:
+#   1. builds and pushes multi-arch images to GHCR
+#   2. builds and pushes the same images to Docker Hub, and syncs the README
+#   3. creates a GitHub Release with notes generated from the merged PRs
+#
+# GHCR needs no configuration - it authenticates with the built-in GITHUB_TOKEN.
+# Docker Hub needs two repository settings under
+# Settings > Secrets and variables > Actions:
 #   secret   DOCKERHUB_TOKEN     - a Docker Hub access token with Read/Write
 #   variable DOCKERHUB_USERNAME  - the Docker Hub account (defaults to mitchallen)
 #
-# Until the secret exists the job skips with a message rather than failing,
-# so tagging a release never reports a spurious red build.
+# Until the secret exists the Docker Hub job skips with a message rather than
+# failing, so tagging a release never reports a spurious red build. GHCR still
+# publishes.
+#
+# A manual run (workflow_dispatch) is a dry run: it builds both architectures
+# for both registries but pushes nothing and creates no release.
 
 on:
   push:
@@ -20,10 +30,81 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE: mitchallen/mockport-server
+  DOCKERHUB_IMAGE: mitchallen/mockport-server
+  # GHCR requires a lowercase path; the repo is mitchallen/mockport-server.
+  GHCR_IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
-  publish:
+  # Re-verify before anything ships. CI already does this on the branch, but a
+  # tag can point at any commit, so prove the tests pass at the tagged tree
+  # once rather than once per registry.
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+
+  publish-ghcr:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive tags
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.GHCR_IMAGE }}
+          # v0.1.2 produces 0.1.2, 0.1, and latest.
+          # is_default_branch is false on a tag push, so latest is gated on
+          # ref_type instead.
+          # A manual run has no tag, so the semver patterns produce nothing.
+          # Give it an "edge" name so the tag list is never empty - an empty
+          # list makes buildx fail with "tag is needed when pushing".
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=edge,enable=${{ github.ref_type == 'branch' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.ref_type == 'tag' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-dockerhub:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,22 +120,8 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::DOCKERHUB_TOKEN is not set - skipping publish. Add it under Settings > Secrets and variables > Actions to enable pushing."
+            echo "::notice::DOCKERHUB_TOKEN is not set - skipping the Docker Hub publish. GHCR still published. Add it under Settings > Secrets and variables > Actions to enable pushing here too."
           fi
-
-      # Re-verify the image before it ships. CI already does this on the
-      # branch, but a tag can point at any commit.
-      - uses: actions/setup-node@v7
-        if: steps.creds.outputs.present == 'true'
-        with:
-          node-version: 24.x
-          cache: npm
-
-      - name: Run tests
-        if: steps.creds.outputs.present == 'true'
-        run: |
-          npm ci
-          npm test
 
       - name: Set up QEMU
         if: steps.creds.outputs.present == 'true'
@@ -76,13 +143,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.IMAGE }}
-          # v1.0.6 produces 1.0.6, 1.0, and latest.
-          # is_default_branch is false on a tag push, so latest is gated on
-          # ref_type instead.
-          # A manual run has no tag, so the semver patterns produce nothing.
-          # Give it an "edge" name so the tag list is never empty - an empty
-          # list makes buildx fail with "tag is needed when pushing".
+          images: ${{ env.DOCKERHUB_IMAGE }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -102,3 +163,53 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Docker Hub's description is not derived from the repo, so it goes stale
+      # silently unless something pushes it. Only worth doing on a real publish.
+      - name: Sync the README to Docker Hub
+        if: steps.creds.outputs.present == 'true' && github.ref_type == 'tag'
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME || 'mitchallen' }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.DOCKERHUB_IMAGE }}
+          readme-filepath: ./README.md
+
+  # Last, so a release only exists for a tag whose images actually shipped.
+  release:
+    needs: [publish-ghcr, publish-dockerhub]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # --generate-notes diffs against the previous tag, which needs the
+          # tag history a shallow clone would omit.
+          fetch-depth: 0
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          version="${VERSION#v}"
+          # --notes is prepended to the generated notes, so this heading sits
+          # above the "What's Changed" list GitHub builds from the merged PRs.
+          notes=$(cat <<EOF
+          ### Images
+
+          \`\`\`
+          docker pull ${GHCR_IMAGE}:${version}
+          docker pull ${DOCKERHUB_IMAGE}:${version}
+          \`\`\`
+
+          Both are built for \`linux/amd64\` and \`linux/arm64\`.
+          EOF
+          )
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --verify-tag \
+            --generate-notes \
+            --notes "$notes"
