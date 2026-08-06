@@ -1,7 +1,7 @@
 # docker build -t <your username>/mockport-server .
 # docker run -d -p 7777:1234 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server
 
-FROM node:24-alpine
+FROM node:25-alpine
 
 ENV NODE_ENV=production
 
