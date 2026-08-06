@@ -393,23 +393,23 @@ Docker shut down in 2021. Publishing now runs in GitHub Actions
 (`.github/workflows/publish.yml`), triggered by a version tag:
 
     git checkout main
-    git tag v0.1.1
+    git tag v0.1.2
     git push origin --tags
 
 That runs the tests, then builds and pushes `linux/amd64` and `linux/arm64`
-images tagged `0.1.1`, `0.1` and `latest`. The most recent release is `v0.1.0`.
+images tagged `0.1.2`, `0.1` and `latest`. The most recent release is `v0.1.1`.
 
 The tag must stay in step with the `version` in `package.json` — the server
 echoes that version on startup, so a mismatch ships an image that misreports
 itself. `make tag` enforces it:
 
-    make tag VERSION=0.1.1
+    make tag VERSION=0.1.2
 
-which refuses to tag unless `package.json` already says `0.1.1`. It creates the
+which refuses to tag unless `package.json` already says `0.1.2`. It creates the
 tag but does not push it, since pushing is what triggers the publish — that
 stays a deliberate, separate step:
 
-    git push origin v0.1.1
+    git push origin v0.1.2
 
 #### One-time setup
 
@@ -431,8 +431,8 @@ it logs in and builds both architectures, but only a `v*` tag actually pushes.
 #### Publishing by hand
 
     make build
-    docker tag mitchallen/mockport-server mitchallen/mockport-server:0.1.1
-    docker push mitchallen/mockport-server:0.1.1
+    docker tag mitchallen/mockport-server mitchallen/mockport-server:0.1.2
+    docker push mitchallen/mockport-server:0.1.2
     docker push mitchallen/mockport-server:latest
 
 Docker Hub page for this image
