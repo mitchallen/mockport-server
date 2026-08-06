@@ -80,10 +80,14 @@ jobs:
           # v1.0.6 produces 1.0.6, 1.0, and latest.
           # is_default_branch is false on a tag push, so latest is gated on
           # ref_type instead.
+          # A manual run has no tag, so the semver patterns produce nothing.
+          # Give it an "edge" name so the tag list is never empty - an empty
+          # list makes buildx fail with "tag is needed when pushing".
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=edge,enable=${{ github.ref_type == 'branch' }}
 
       - name: Build and push
         if: steps.creds.outputs.present == 'true'
@@ -91,7 +95,9 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: true
+          # Only a v* tag publishes. A manual run is a dry run: it proves the
+          # credentials and the multi-arch build work without pushing.
+          push: ${{ github.ref_type == 'tag' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
