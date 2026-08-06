@@ -398,8 +398,10 @@ They will look for and use these two files on your host machine:
 
 Earlier versions of this project were built automatically by Docker Cloud, which
 Docker shut down in 2021. Releasing now runs in GitHub Actions
-(`.github/workflows/publish.yml`), triggered by a version tag. The most recent
-release is `v0.1.1`.
+(`.github/workflows/publish.yml`), triggered by a version tag. Released versions
+are listed on the
+[Releases page](https://github.com/mitchallen/mockport-server/releases) — the
+version numbers below are only examples.
 
 A release is three commands. First, open a PR that bumps the version:
 
