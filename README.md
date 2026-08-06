@@ -455,14 +455,21 @@ __Settings > Secrets and variables > Actions__:
 
 | Name | Kind | Value |
 | --- | --- | --- |
-| `DOCKERHUB_TOKEN` | secret | A Docker Hub access token — see the scope note below |
+| `DOCKERHUB_TOKEN` | secret | A Docker Hub access token with **Read/Write/Delete** scope |
 | `DOCKERHUB_USERNAME` | variable | Docker Hub account (optional, defaults to `mitchallen`) |
 
-Pushing images needs only **Read/Write** scope. Syncing the description needs
-**Read/Write/Delete** — a read/write token gets `403 Forbidden` on that endpoint,
-which is exactly how `v0.1.2` failed. That step is therefore `continue-on-error`:
-the images and the Release still go out, and the Docker Hub description simply
-stays as it was. Widen the token's scope if you want the sync to work.
+The Delete scope looks heavier than it needs to be, and nothing here deletes
+anything. Pushing images alone would be happy with Read/Write, but the
+description sync uses an endpoint that rejects a read/write token with `403
+Forbidden` — which is how `v0.1.2` failed. Tokens are managed at
+[app.docker.com](https://app.docker.com/settings/personal-access-tokens); an
+existing token's scope can be widened in place, leaving the secret's value
+unchanged.
+
+A narrower token is not fatal: the sync step is `continue-on-error`, so images
+and the Release still go out and the description just stays as it was. That
+shows up as a green step whose log says `Forbidden` rather than
+`Request successful`, so check the log, not the check mark.
 
 Until `DOCKERHUB_TOKEN` is set that job skips with a notice instead of failing,
 so tagging a release will not produce a red build — and GHCR still publishes.
