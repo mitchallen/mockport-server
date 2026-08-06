@@ -43,27 +43,23 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    # Build under a throwaway name so a CI image is never mistaken for a
+    # publishable one. Both are picked up by the Makefile's ?= defaults.
+    env:
+      IMAGE: mockport-server
+      TAG: ci
     steps:
       - uses: actions/checkout@v7
 
-      - name: Build image
-        run: docker build -t mockport-server:ci .
+      # `make smoke` builds the image, waits for the server, curls a mock and
+      # removes the container whether or not the check passed. Driving it from
+      # the Makefile rather than inline here keeps this identical to what
+      # `make ci` runs locally, so the two cannot drift apart.
+      - name: Verify the image serves its built-in mockfile
+        run: make smoke MOUNT=
 
-      - name: Run container and verify it serves mocks
-        run: |
-          docker run -d -p 7777:1234 --name mockport-ci mockport-server:ci
-          for i in $(seq 1 30); do
-            if curl -sf -o /dev/null http://localhost:7777/pets/1; then
-              echo "server is up"
-              break
-            fi
-            if [ "$i" = "30" ]; then
-              echo "server did not come up in time"
-              docker logs mockport-ci
-              exit 1
-            fi
-            sleep 1
-          done
-          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7777/pets/1)
-          test "$code" = "200" || { docker logs mockport-ci; exit 1; }
-          docker rm -f mockport-ci
+      # MOUNT is what a user supplies with -v, and test/data mocks /dogs/*
+      # instead of /pets/*, so this proves the override actually takes effect
+      # rather than the built-in file answering both times.
+      - name: Verify a mounted mockfile overrides the built-in one
+        run: make smoke

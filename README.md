@@ -27,6 +27,10 @@ Requires Node.js 20 or later.
 	
 This will echo the default mocks requests as curl commands.
 
+There is also a `Makefile` covering the whole workflow — `make start`,
+`make test`, `make run` and so on. Run `make help` for the list, or see
+[Make targets](#make-targets).
+
 ### To test locally
 
 Cut and paste some of the sample curl commands from the console into another terminal window.
@@ -119,6 +123,61 @@ request. It runs the tests on Node 20, 22 and 24, fails the build on an
 `npm audit` finding of moderate or higher, and builds the Docker image and
 curls a mock out of the running container.
 
+### Make targets
+
+A `Makefile` wraps the whole workflow. It is the quickest way to drive the
+project without memorising docker flags:
+
+	make help
+
+| Target | What it does |
+| --- | --- |
+| `make install` | `npm ci` from the lockfile |
+| `make test` | Run the unit tests |
+| `make coverage` | Run the tests with coverage |
+| `make audit` | Fail on known vulnerabilities, as CI does |
+| `make check` | `test` + `audit` |
+| `make start` | Run the server locally |
+| `make start-animal` | Run locally against `data/animal.json` |
+| `make build` | Build the docker image |
+| `make run` | Build, then run the container detached |
+| `make logs` | Follow the container's console output |
+| `make stop` / `make rm` | Stop / remove the container |
+| `make restart` | Recreate the container from the current image |
+| `make ps` | Show the container's status |
+| `make smoke` | Build the image and prove it serves a mock |
+| `make ci` | Everything CI runs, locally |
+| `make tag` | Tag a release (see [Publishing](#publishing-the-docker-image)) |
+| `make clean` / `make distclean` | Remove build output / also `node_modules` and the image |
+
+Targets that need dependencies install them first, so `make test` works from a
+fresh clone. The install is stamped against the lockfile, so it only re-runs
+when `package.json` or `package-lock.json` actually changes.
+
+Anything worth changing is a variable:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `IMAGE` | `mitchallen/mockport-server` | Image name |
+| `TAG` | `latest` | Image tag |
+| `CONTAINER` | `mockport-server` | Container name |
+| `HOST_PORT` | `7777` | Host port `make run` publishes |
+| `PORT` | `1234` | Port inside the container |
+| `MOUNT` | `$(PWD)/test/data` | Host dir mounted over `/usr/src/app/data` |
+| `MOCKFILE` | unset | Mockfile for `make start` |
+
+For example:
+
+	make run HOST_PORT=8080
+	make run MOUNT=                       # use the image's built-in mockfile
+	make start MOCKFILE=./data/animal.json
+
+`make smoke` mirrors the docker job in CI: it builds the image, starts a
+container on its own name and port so it never disturbs one left running by
+`make run`, waits for the server, curls a mock, and tears the container down
+whether or not the check passed. It follows `MOUNT`, so it curls `/dogs/1`
+against the mounted mockfile and `/pets/1` against the built-in one.
+
 * * *
 
 ## Running as a Docker Container
@@ -156,7 +215,16 @@ obvious which mockfile the container actually picked up.
 
 ### Build the image locally
 
+    make build
+
+or, equivalently:
+
     npm run docker:build
+
+The raw `docker` commands in the sections below spell out what is happening.
+`make build`, `make run`, `make stop`, `make rm` and `make restart` do the same
+things with the ports and paths already filled in — see
+[Make targets](#make-targets).
 
 ### Run the image locally as a container
 
@@ -278,9 +346,19 @@ Docker shut down in 2021. Publishing now runs in GitHub Actions
     git push origin --tags
 
 That runs the tests, then builds and pushes `linux/amd64` and `linux/arm64`
-images tagged `0.1.1`, `0.1` and `latest`. Keep the tag in step with the
-`version` in `package.json` — the server echoes that version on startup. The
-most recent release is `v0.1.0`.
+images tagged `0.1.1`, `0.1` and `latest`. The most recent release is `v0.1.0`.
+
+The tag must stay in step with the `version` in `package.json` — the server
+echoes that version on startup, so a mismatch ships an image that misreports
+itself. `make tag` enforces it:
+
+    make tag VERSION=0.1.1
+
+which refuses to tag unless `package.json` already says `0.1.1`. It creates the
+tag but does not push it, since pushing is what triggers the publish — that
+stays a deliberate, separate step:
+
+    git push origin v0.1.1
 
 #### One-time setup
 
@@ -301,7 +379,7 @@ it logs in and builds both architectures, but only a `v*` tag actually pushes.
 
 #### Publishing by hand
 
-    npm run docker:build
+    make build
     docker tag mitchallen/mockport-server mitchallen/mockport-server:0.1.1
     docker push mitchallen/mockport-server:0.1.1
     docker push mitchallen/mockport-server:latest
