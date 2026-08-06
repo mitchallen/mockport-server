@@ -198,7 +198,8 @@ project without memorising docker flags:
 | `make ps` | Show the container's status |
 | `make smoke` | Build the image and prove it serves a mock |
 | `make ci` | Everything CI runs, locally |
-| `make tag` | Tag a release (see [Publishing](#publishing-the-docker-image)) |
+| `make release` | Open a PR bumping the version (see [Releasing](#releasing)) |
+| `make tag` | Tag the merged bump, ready to push |
 | `make clean` / `make distclean` | Remove build output / also `node_modules` and the image |
 
 Targets that need dependencies install them first, so `make test` works from a
@@ -216,6 +217,7 @@ Anything worth changing is a variable:
 | `PORT` | `1234` | Port inside the container |
 | `MOUNT` | `$(PWD)/test/data` | Host dir mounted over `/usr/src/app/data` |
 | `MOCKFILE` | unset | Mockfile for `make start` |
+| `BUMP` | `patch` | Version increment `make release` applies |
 
 For example:
 
@@ -262,7 +264,13 @@ obvious which mockfile the container actually picked up.
 
 ### Pull the image from the repo
 
+Every release is published to two registries. Either works — pick one:
+
+    docker pull ghcr.io/mitchallen/mockport-server:latest
     docker pull mitchallen/mockport-server:latest
+
+The examples below use the shorter Docker Hub name. Prefix it with
+`ghcr.io/` to run the GHCR copy instead; the images are identical.
 
 ### Build the image locally
 
@@ -386,34 +394,62 @@ They will look for and use these two files on your host machine:
     
 * * *
 
-### Publishing the Docker image
+### Releasing
 
 Earlier versions of this project were built automatically by Docker Cloud, which
-Docker shut down in 2021. Publishing now runs in GitHub Actions
-(`.github/workflows/publish.yml`), triggered by a version tag:
+Docker shut down in 2021. Releasing now runs in GitHub Actions
+(`.github/workflows/publish.yml`), triggered by a version tag. The most recent
+release is `v0.1.1`.
 
-    git checkout main
-    git tag v0.1.2
-    git push origin --tags
+A release is three commands. First, open a PR that bumps the version:
 
-That runs the tests, then builds and pushes `linux/amd64` and `linux/arm64`
-images tagged `0.1.2`, `0.1` and `latest`. The most recent release is `v0.1.1`.
+    make release
+
+That bumps `package.json` and the lockfile (patch by default — pass
+`BUMP=minor`, `BUMP=major`, or an exact `VERSION=0.2.0`), commits the bump on a
+`release-x.y.z` branch, pushes it and opens the PR with `gh`. The bump goes
+through a PR like anything else, so CI verifies it before it lands.
+
+Once that PR merges, tag the merge commit and push the tag:
+
+    git checkout main && git pull
+    make tag VERSION=0.1.2
+    git push origin v0.1.2
 
 The tag must stay in step with the `version` in `package.json` — the server
 echoes that version on startup, so a mismatch ships an image that misreports
-itself. `make tag` enforces it:
+itself. `make tag` refuses to tag unless `package.json` already says `0.1.2`. It
+creates the tag but does not push it, since pushing is what triggers the
+publish — that stays a deliberate, separate step.
 
-    make tag VERSION=0.1.2
+#### What a tag push does
 
-which refuses to tag unless `package.json` already says `0.1.2`. It creates the
-tag but does not push it, since pushing is what triggers the publish — that
-stays a deliberate, separate step:
+The `v*` tag runs the tests once at the tagged tree, then in parallel:
 
-    git push origin v0.1.2
+| Job | Result |
+| --- | --- |
+| `publish-ghcr` | `linux/amd64` + `linux/arm64` images to `ghcr.io/mitchallen/mockport-server` |
+| `publish-dockerhub` | the same images to `mitchallen/mockport-server`, then syncs this README to the Docker Hub description |
+| `release` | a GitHub Release for the tag, with notes generated from the merged PRs |
+
+Both registries get three tags: the full version, the major.minor (`0.1`), and
+`latest`. The release job runs last, so a Release only exists for a tag whose
+images actually shipped.
+
+Pull from either registry:
+
+    docker pull ghcr.io/mitchallen/mockport-server:latest
+    docker pull mitchallen/mockport-server:latest
 
 #### One-time setup
 
-The workflow needs Docker Hub credentials, under
+GHCR needs no configuration — it authenticates with the built-in `GITHUB_TOKEN`.
+One caveat: a GHCR package is **private on first publish**. To allow anonymous
+`docker pull`, open the package from the repo's __Packages__ sidebar and set
+__Package settings > Danger Zone > Change visibility__ to public. That is a
+one-time step; later pushes keep the setting.
+
+Docker Hub needs credentials, under
 __Settings > Secrets and variables > Actions__:
 
 | Name | Kind | Value |
@@ -421,12 +457,13 @@ __Settings > Secrets and variables > Actions__:
 | `DOCKERHUB_TOKEN` | secret | A Docker Hub access token with Read/Write scope |
 | `DOCKERHUB_USERNAME` | variable | Docker Hub account (optional, defaults to `mitchallen`) |
 
-Until `DOCKERHUB_TOKEN` is set the job skips with a notice instead of failing, so
-tagging a release will not produce a red build.
+Until `DOCKERHUB_TOKEN` is set that job skips with a notice instead of failing,
+so tagging a release will not produce a red build — and GHCR still publishes.
 
 To check the credentials without publishing, run the workflow by hand from the
 __Actions__ tab (or `gh workflow run publish.yml`). A manual run is a dry run —
-it logs in and builds both architectures, but only a `v*` tag actually pushes.
+it logs in and builds both architectures for both registries, but pushes nothing
+and creates no Release. Only a `v*` tag publishes.
 
 #### Publishing by hand
 

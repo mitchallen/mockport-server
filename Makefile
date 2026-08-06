@@ -37,8 +37,12 @@ endif
 
 .DEFAULT_GOAL := help
 
+# Version increment `make release` applies when VERSION is not given.
+BUMP ?= patch
+
 .PHONY: help install test coverage audit check start start-animal \
-        build run logs shell stop rm restart ps smoke ci tag clean distclean
+        build run logs shell stop rm restart ps smoke ci release tag \
+        clean distclean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -135,8 +139,32 @@ ci: check smoke ## Everything CI runs, locally
 
 # ------------------------------------------------------------- release ---
 
-# Does not push. Pushing the tag is what triggers the publish workflow, so
-# that stays a deliberate, separate step.
+# Step one of a release: get the version bump onto main through a PR, so CI
+# verifies it like any other change. Needs the gh CLI.
+release: ## Open a release PR bumping the version (BUMP=patch|minor|major)
+	@test -z "$$(git status --porcelain)" || \
+	  { echo "working tree is dirty - commit or stash first"; exit 1; }
+	@b=$$(git rev-parse --abbrev-ref HEAD); \
+	if [ "$$b" != "main" ]; then \
+	  echo "release starts from main (currently on $$b)"; exit 1; \
+	fi
+	git pull --ff-only origin main
+	@new=$$(npm version $(if $(VERSION),$(VERSION),$(BUMP)) --no-git-tag-version); \
+	v=$${new#v}; \
+	git checkout -b release-$$v && \
+	git add package.json package-lock.json && \
+	git commit -q -m "Release $$new" && \
+	git push -q -u origin release-$$v && \
+	gh pr create --base main --title "Release $$new" \
+	  --body "Bumps the version to $$v so a $$new tag can be cut. \`make tag\` refuses to tag unless package.json already matches, so this lands first." && \
+	echo "" && \
+	echo "Once the PR merges:" && \
+	echo "  git checkout main && git pull" && \
+	echo "  make tag VERSION=$$v" && \
+	echo "  git push origin $$new"
+
+# Step two. Does not push: pushing the tag is what triggers the publish
+# workflow, so that stays a deliberate, separate step.
 tag: ## Tag a release locally (VERSION=x.y.z, must match package.json)
 	@test -n "$(VERSION)" || { echo "usage: make tag VERSION=x.y.z"; exit 1; }
 	@pkg=$$(node -p "require('./package.json').version"); \
