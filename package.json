@@ -5,13 +5,13 @@
   "description": "A mock port server for testing HTTP requests.",
   "main": "src/index.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node src/index.js",
     "start:animal": "MOCKFILE=./data/animal.json node src/index.js",
     "test": "mocha test/unit --recursive --timeout 20000",
-    "test:coverage": "c8 --reporter=text --reporter=lcov npm test",
+    "test:coverage": "c8 npm test",
     "docker:build": "docker build -t mitchallen/mockport-server .",
     "docker:run": "docker run -d -p 7777:1234 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server",
     "docker:start": "docker start mockport-server",
@@ -49,6 +49,17 @@
     "c8": "^12.0.0",
     "mocha": "^12.0.1",
     "supertest": "^7.2.2"
+  },
+  "c8": {
+    "check-coverage": true,
+    "100": true,
+    "include": [
+      "src/**/*.js"
+    ],
+    "reporter": [
+      "text",
+      "lcov"
+    ]
   },
   "overrides": {
     "diff": "^8.0.4",

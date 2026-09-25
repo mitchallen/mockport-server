@@ -2,7 +2,7 @@
 
 A mock port server for testing HTTP requests.
 
-[![CI](https://github.com/mitchallen/mockport-server/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mitchallen/mockport-server/actions/workflows/ci.yml)
+[![CI](https://github.com/mitchallen/mockport-server/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mitchallen/mockport-server/actions/workflows/ci.yml) [![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mitchallen/mockport-server/actions/workflows/ci.yml)
 [![Docker image version](https://img.shields.io/docker/v/mitchallen/mockport-server?sort=semver&logo=docker&label=docker%20hub)](https://hub.docker.com/r/mitchallen/mockport-server/tags/)
 [![Docker image size](https://img.shields.io/docker/image-size/mitchallen/mockport-server/latest?logo=docker&label=image%20size)](https://hub.docker.com/r/mitchallen/mockport-server/tags/)
 [![Docker pulls](https://img.shields.io/docker/pulls/mitchallen/mockport-server?logo=docker)](https://hub.docker.com/r/mitchallen/mockport-server/)
@@ -169,8 +169,14 @@ With coverage:
 
 	npm run test:coverage
 
+Coverage must stay at **100%** (statements, branches, functions and lines);
+`test:coverage` fails below that. The coverage badge above is static and backed
+by that threshold: if coverage drops, CI (and its badge) goes red.
+
 CI (`.github/workflows/ci.yml`) runs on every push to `main` and every pull
-request. It runs the tests on Node 20, 22 and 24, fails the build on an
+request. It runs the tests with coverage on Node 22 and 24 (writing the
+coverage table to the job summary and uploading the report as the `coverage`
+artifact), fails the build on an
 `npm audit` finding of moderate or higher, and builds the Docker image and
 curls a mock out of the running container.
 
@@ -185,9 +191,9 @@ project without memorising docker flags:
 | --- | --- |
 | `make install` | `npm ci` from the lockfile |
 | `make test` | Run the unit tests |
-| `make coverage` | Run the tests with coverage |
+| `make coverage` | Run the tests with coverage (fails below 100%) |
 | `make audit` | Fail on known vulnerabilities, as CI does |
-| `make check` | `test` + `audit` |
+| `make check` | `coverage` + `audit` |
 | `make start` | Run the server locally |
 | `make start-animal` | Run locally against `data/animal.json` |
 | `make build` | Build the docker image |
