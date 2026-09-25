@@ -1,6 +1,6 @@
 {
   "name": "mockport-server",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "A mock port server for testing HTTP requests.",
   "main": "src/index.js",
@@ -51,8 +51,8 @@
     "supertest": "^7.2.2"
   },
   "c8": {
-    "check-coverage": true,
     "100": true,
+    "check-coverage": true,
     "include": [
       "src/**/*.js"
     ],
