@@ -3,10 +3,11 @@ updates:
   - package-ecosystem: npm
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 10
     groups:
-      # Keep routine patch/minor noise down to one PR per week.
+      # Keep routine patch/minor noise down to one PR per month. Security
+      # updates ignore the schedule and still open as soon as an alert fires.
       minor-and-patch:
         update-types:
           - minor
@@ -15,7 +16,7 @@ updates:
   - package-ecosystem: docker
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly
     ignore:
       # Only even-numbered Node majors become LTS; odd ones are EOL within
       # about six months. Dependabot proposed node:25-alpine, which was
@@ -28,4 +29,4 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: weekly
+      interval: monthly

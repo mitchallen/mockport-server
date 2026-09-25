@@ -97,9 +97,10 @@ module.exports.createApp = (spec) => {
         const key = `${req.method}|${req.url}`;
         var reply = mocks[key];
         if (reply) {
-            const fallback = httpMethod[req.method]
-                ? httpMethod[req.method].status
-                : 200;
+            // A reply only exists for a method buildMocks registered, and it
+            // cannot register one missing from httpMethod (logMock reads its
+            // curl flags), so the lookup always succeeds here.
+            const fallback = httpMethod[req.method].status;
             const status = reply.status ? reply.status : fallback;
             log(status);
             if (status == 204) {

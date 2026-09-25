@@ -166,6 +166,21 @@ describe('mockport', function () {
                 .expect(200);
         });
 
+        it('builds with no spec at all, logging to console.log', function () {
+            const logged = [];
+            const original = console.log;
+            console.log = (...args) => { logged.push(args); };
+            // supertest's Test is a thenable, not a Promise, so wrap it to
+            // get .finally and restore console.log whatever the outcome.
+            return Promise.resolve(request(mockPort.createApp())
+                .get('/pets/1')
+                .expect(404))
+                .finally(() => { console.log = original; })
+                .then(() => {
+                    assert.ok(logged.length > 0, 'expected the request to be logged');
+                });
+        });
+
         it('accepts a request with no body and no content-type', function () {
             // Express 5 leaves req.body undefined here; the handler must not throw.
             return request(app())
@@ -195,6 +210,30 @@ describe('mockport', function () {
                     .expect(200)
                     .then(() => server.close(done))
                     .catch(err => server.close(() => done(err)));
+            });
+        });
+
+        it('falls back to defaults when called with no spec', function (done) {
+            // No spec: an OS-assigned port (listen(undefined)), the default
+            // app name, and console.log for the startup banner.
+            const logged = [];
+            const original = console.log;
+            console.log = (...args) => { logged.push(args.join(' ')); };
+            const server = mockPort.listen();
+
+            server.on('listening', () => {
+                console.log = original;
+                server.close(() => {
+                    try {
+                        assert.ok(
+                            logged.some(line => line.includes(':mockport:')),
+                            `expected the default app name in the banner, got: ${logged}`
+                        );
+                        done();
+                    } catch (err) {
+                        done(err);
+                    }
+                });
             });
         });
     });

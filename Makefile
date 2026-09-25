@@ -61,13 +61,13 @@ install: node_modules ## Install dependencies from the lockfile
 test: node_modules ## Run the unit tests
 	npm test
 
-coverage: node_modules ## Run the unit tests with coverage
+coverage: node_modules ## Run the unit tests with coverage (fails below 100%)
 	npm run test:coverage
 
 audit: node_modules ## Fail on known vulnerabilities, as CI does
 	npm audit --audit-level=moderate
 
-check: test audit ## Run the tests and the audit
+check: coverage audit ## Run the tests with coverage and the audit
 
 start: node_modules ## Run the server locally (MOCKFILE=... to override)
 ifeq ($(strip $(MOCKFILE)),)

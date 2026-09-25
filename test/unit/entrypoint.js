@@ -135,6 +135,44 @@ describe('src/index.js', function () {
         });
     });
 
+    describe('PORT unset', function () {
+
+        // index.js falls back to port 1234. That is a fixed port, so skip
+        // rather than fail when something on this machine already holds it.
+        let child;
+
+        before(function () {
+            return new Promise(resolve => {
+                const probe = net.createServer();
+                probe.once('error', () => resolve(false));
+                probe.listen(1234, () => probe.close(() => resolve(true)));
+            }).then(free => {
+                if (!free) {
+                    this.skip();
+                }
+                const env = Object.assign({}, process.env);
+                delete env.PORT;
+                delete env.MOCKFILE;
+                child = spawn(
+                    process.execPath,
+                    [path.join(root, 'src/index.js')],
+                    { cwd: root, env: env, stdio: ['ignore', 'ignore', 'pipe'] }
+                );
+                return waitForServer(1234, child);
+            });
+        });
+
+        after(function () {
+            return stop({ child });
+        });
+
+        it('listens on the default port 1234', function () {
+            return get(1234, '/pets/1').then(res => {
+                assert.strictEqual(res.status, 200);
+            });
+        });
+    });
+
     describe('a missing mockfile', function () {
 
         it('exits rather than starting with no mocks', function () {
