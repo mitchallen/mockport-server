@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node src/index.js",
     "start:animal": "MOCKFILE=./data/animal.json node src/index.js",
-    "test": "mocha test/unit --recursive --timeout 20000",
+    "test": "node --test --test-timeout=20000 \"test/unit/**/*.js\"",
     "test:coverage": "c8 npm test",
     "docker:build": "docker build -t mitchallen/mockport-server .",
     "docker:run": "docker run -d -p 7777:1234 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server",
@@ -46,9 +46,7 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
-    "c8": "^12.0.0",
-    "mocha": "^12.0.3",
-    "supertest": "^7.3.1"
+    "c8": "^12.0.0"
   },
   "c8": {
     "100": true,

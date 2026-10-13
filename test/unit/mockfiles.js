@@ -4,11 +4,12 @@
 // mockfile (data/animal.json, used by `npm run start:animal`) cannot drift
 // out of sync with the server without a test failing.
 
-const assert = require('assert'),
-    request = require('supertest'),
+const { describe, it, before } = require('node:test'),
+    assert = require('assert'),
     fs = require('fs'),
     path = require('path');
 
+const request = require('../helpers/request');
 const mockPort = require('../../src/mockport');
 
 const root = path.join(__dirname, '../..');
@@ -112,12 +113,14 @@ describe('shipped mockfiles', function () {
                         const expected = (response && response.status)
                             || defaultStatus[mock.request.method];
 
-                        let req = request(app)[method](mock.request.url);
-                        if (method === 'post' || method === 'put' || method === 'patch') {
-                            req = req.send({});
-                        }
+                        const body = (method === 'post' || method === 'put' || method === 'patch')
+                            ? {} : undefined;
 
-                        return req.expect(expected).then(function (res) {
+                        return request(app, method, mock.request.url, body).then(function (res) {
+                            assert.strictEqual(
+                                res.status, expected,
+                                `${mock.request.method} ${mock.request.url}`
+                            );
                             // A 204 never carries a body, even when one is declared.
                             if (expected === 204) {
                                 assert.strictEqual(res.text, '');
@@ -134,7 +137,7 @@ describe('shipped mockfiles', function () {
 
                 return mocks.reduce(function (chain, mock) {
                     return chain.then(function () {
-                        return request(app).head(mock.request.url).then(function (res) {
+                        return request(app, 'head', mock.request.url).then(function (res) {
                             assert.notStrictEqual(
                                 res.status, 404,
                                 `no HEAD route for ${mock.request.url}`
@@ -144,10 +147,9 @@ describe('shipped mockfiles', function () {
                 }, Promise.resolve());
             });
 
-            it('404s a path that is not declared', function () {
-                return request(appFor(mocks))
-                    .get('/definitely-not-mocked')
-                    .expect(404);
+            it('404s a path that is not declared', async function () {
+                const res = await request(appFor(mocks), 'get', '/definitely-not-mocked');
+                assert.strictEqual(res.status, 404);
             });
         });
     });

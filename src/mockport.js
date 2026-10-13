@@ -55,7 +55,7 @@ function buildMocks(spec, log) {
 }
 
 // Creates the configured express app without binding a port.
-// Exported separately so tests can drive it via supertest.
+// Exported separately so tests can drive it without a fixed port.
 module.exports.createApp = (spec) => {
 
     spec = spec || {};

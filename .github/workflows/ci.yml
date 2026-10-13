@@ -25,7 +25,7 @@ jobs:
 
       - run: npm ci
 
-      # c8 wraps mocha and fails the step below 100% coverage (the c8 block
+      # c8 wraps node --test and fails the step below 100% coverage (the c8 block
       # in package.json), so this is the test gate and the coverage gate.
       - run: npm run test:coverage
 
