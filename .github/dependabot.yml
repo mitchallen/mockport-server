@@ -1,9 +1,14 @@
 version: 2
+# Noise control: `cooldown` skips releases younger than 7 days, so a burst of
+# quick patch releases lands as one bump to the latest instead of a PR each.
+# Cooldown does not delay security updates.
 updates:
   - package-ecosystem: npm
     directory: "/"
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     groups:
       # Keep routine patch/minor noise down to one PR per month. Security
@@ -17,6 +22,8 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     ignore:
       # Only even-numbered Node majors become LTS; odd ones are EOL within
       # about six months. Dependabot proposed node:25-alpine, which was
@@ -30,3 +37,8 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      actions-minor-patch:
+        update-types: ["minor", "patch"]
