@@ -1,10 +1,11 @@
 "use strict";
 
-const assert = require('assert'),
-    request = require('supertest'),
+const { describe, it } = require('node:test'),
+    assert = require('assert'),
     fs = require('fs'),
     path = require('path');
 
+const request = require('../helpers/request');
 const mockPort = require('../../src/mockport');
 
 const mocks = JSON.parse(
@@ -30,171 +31,130 @@ describe('mockport', function () {
 
     describe('matched mocks', function () {
 
-        it('returns the configured status and body for a GET', function () {
-            return request(app())
-                .get('/pets/1')
-                .expect(200)
-                .expect('Content-Type', /json/)
-                .then(res => {
-                    assert.deepStrictEqual(res.body, { id: 1, name: 'Pepper' });
-                });
+        it('returns the configured status and body for a GET', async function () {
+            const res = await request(app(), 'get', '/pets/1');
+            assert.strictEqual(res.status, 200);
+            assert.match(res.headers.get('content-type'), /json/);
+            assert.deepStrictEqual(res.body, { id: 1, name: 'Pepper' });
         });
 
-        it('matches a url that includes a query string', function () {
-            return request(app())
-                .get('/api/login?foo=bar&message=ping')
-                .expect(201)
-                .then(res => {
-                    assert.deepStrictEqual(res.body, { message: 'pong' });
-                });
+        it('matches a url that includes a query string', async function () {
+            const res = await request(app(), 'get', '/api/login?foo=bar&message=ping');
+            assert.strictEqual(res.status, 201);
+            assert.deepStrictEqual(res.body, { message: 'pong' });
         });
 
-        it('returns the configured status and body for a POST', function () {
-            return request(app())
-                .post('/pets')
-                .send({ name: 'Bluey' })
-                .expect(201)
-                .then(res => {
-                    assert.deepStrictEqual(res.body, { id: 5, name: 'Bluey' });
-                });
+        it('returns the configured status and body for a POST', async function () {
+            const res = await request(app(), 'post', '/pets', { name: 'Bluey' });
+            assert.strictEqual(res.status, 201);
+            assert.deepStrictEqual(res.body, { id: 5, name: 'Bluey' });
         });
 
-        it('sends no content when the configured status is 204', function () {
-            return request(app())
-                .put('/pets/8')
-                .send({})
-                .expect(204)
-                .then(res => {
-                    assert.deepStrictEqual(res.body, {});
-                    assert.strictEqual(res.text, '');
-                });
+        it('sends no content when the configured status is 204', async function () {
+            const res = await request(app(), 'put', '/pets/8', {});
+            assert.strictEqual(res.status, 204);
+            assert.deepStrictEqual(res.body, {});
+            assert.strictEqual(res.text, '');
         });
 
-        it('honors a status with no body', function () {
-            return request(app())
-                .patch('/pets/2')
-                .send({})
-                .expect(401)
-                .then(res => {
-                    assert.strictEqual(res.text, '');
-                });
+        it('honors a status with no body', async function () {
+            const res = await request(app(), 'patch', '/pets/2', {});
+            assert.strictEqual(res.status, 401);
+            assert.strictEqual(res.text, '');
         });
 
-        it('returns a body alongside an error status', function () {
-            return request(app())
-                .patch('/pets/3')
-                .send({})
-                .expect(403)
-                .then(res => {
-                    assert.deepStrictEqual(res.body, {
-                        error: 'Forbidden - you are not authorized'
-                    });
-                });
+        it('returns a body alongside an error status', async function () {
+            const res = await request(app(), 'patch', '/pets/3', {});
+            assert.strictEqual(res.status, 403);
+            assert.deepStrictEqual(res.body, {
+                error: 'Forbidden - you are not authorized'
+            });
         });
 
-        it('falls back to the per-method default status when none is given', function () {
+        it('falls back to the per-method default status when none is given', async function () {
             // PATCH defaults to 204, so the mock's body is intentionally dropped.
-            return request(app())
-                .patch('/pets/4')
-                .send({})
-                .expect(204)
-                .then(res => {
-                    assert.strictEqual(res.text, '');
-                });
+            const res = await request(app(), 'patch', '/pets/4', {});
+            assert.strictEqual(res.status, 204);
+            assert.strictEqual(res.text, '');
         });
 
-        it('handles a mock with no response block at all', function () {
-            return request(app())
-                .patch('/pets/1')
-                .send({})
-                .expect(204);
+        it('handles a mock with no response block at all', async function () {
+            const res = await request(app(), 'patch', '/pets/1', {});
+            assert.strictEqual(res.status, 204);
         });
 
-        it('handles DELETE', function () {
-            return request(app())
-                .delete('/pets/5')
-                .expect(204);
+        it('handles DELETE', async function () {
+            const res = await request(app(), 'delete', '/pets/5');
+            assert.strictEqual(res.status, 204);
         });
 
-        it('auto-registers HEAD for each mock so curl -I reports a status', function () {
-            return request(app())
-                .head('/pets/1')
-                .expect(200);
+        it('auto-registers HEAD for each mock so curl -I reports a status', async function () {
+            const res = await request(app(), 'head', '/pets/1');
+            assert.strictEqual(res.status, 200);
         });
     });
 
     describe('unmatched requests', function () {
 
-        it('returns 404 by default', function () {
-            return request(app())
-                .get('/nope')
-                .expect(404);
+        it('returns 404 by default', async function () {
+            const res = await request(app(), 'get', '/nope');
+            assert.strictEqual(res.status, 404);
         });
 
-        it('honors a custom notFoundStatus', function () {
-            return request(app({ notFoundStatus: 418 }))
-                .get('/nope')
-                .expect(418);
+        it('honors a custom notFoundStatus', async function () {
+            const res = await request(app({ notFoundStatus: 418 }), 'get', '/nope');
+            assert.strictEqual(res.status, 418);
         });
 
-        it('does not match a mock url when the query string differs', function () {
-            return request(app())
-                .get('/api/login?foo=bar')
-                .expect(404);
+        it('does not match a mock url when the query string differs', async function () {
+            const res = await request(app(), 'get', '/api/login?foo=bar');
+            assert.strictEqual(res.status, 404);
         });
 
-        it('does not match a mocked url under a different method', function () {
-            return request(app())
-                .post('/pets/1')
-                .send({})
-                .expect(404);
+        it('does not match a mocked url under a different method', async function () {
+            const res = await request(app(), 'post', '/pets/1', {});
+            assert.strictEqual(res.status, 404);
         });
     });
 
     describe('configuration', function () {
 
-        it('serves nothing but 404s when no mocks are supplied', function () {
-            return request(app({ mocks: undefined }))
-                .get('/pets/1')
-                .expect(404);
+        it('serves nothing but 404s when no mocks are supplied', async function () {
+            const res = await request(app({ mocks: undefined }), 'get', '/pets/1');
+            assert.strictEqual(res.status, 404);
         });
 
-        it('enables CORS', function () {
-            return request(app())
-                .get('/pets/1')
-                .expect('Access-Control-Allow-Origin', '*')
-                .expect(200);
+        it('enables CORS', async function () {
+            const res = await request(app(), 'get', '/pets/1');
+            assert.strictEqual(res.status, 200);
+            assert.strictEqual(res.headers.get('access-control-allow-origin'), '*');
         });
 
-        it('builds with no spec at all, logging to console.log', function () {
+        it('builds with no spec at all, logging to console.log', async function () {
             const logged = [];
             const original = console.log;
             console.log = (...args) => { logged.push(args); };
-            // supertest's Test is a thenable, not a Promise, so wrap it to
-            // get .finally and restore console.log whatever the outcome.
-            return Promise.resolve(request(mockPort.createApp())
-                .get('/pets/1')
-                .expect(404))
-                .finally(() => { console.log = original; })
-                .then(() => {
-                    assert.ok(logged.length > 0, 'expected the request to be logged');
-                });
+            let res;
+            try {
+                res = await request(mockPort.createApp(), 'get', '/pets/1');
+            } finally {
+                console.log = original;
+            }
+            assert.strictEqual(res.status, 404);
+            assert.ok(logged.length > 0, 'expected the request to be logged');
         });
 
-        it('accepts a request with no body and no content-type', function () {
+        it('accepts a request with no body and no content-type', async function () {
             // Express 5 leaves req.body undefined here; the handler must not throw.
-            return request(app())
-                .get('/pets/2')
-                .expect(200)
-                .then(res => {
-                    assert.deepStrictEqual(res.body, { id: 2, name: 'Marchio' });
-                });
+            const res = await request(app(), 'get', '/pets/2');
+            assert.strictEqual(res.status, 200);
+            assert.deepStrictEqual(res.body, { id: 2, name: 'Marchio' });
         });
     });
 
     describe('listen', function () {
 
-        it('binds a port and serves mocks', function (done) {
+        it('binds a port and serves mocks', async function () {
             const server = mockPort.listen({
                 app: 'mockport-server',
                 version: 'test',
@@ -204,16 +164,17 @@ describe('mockport', function () {
                 log: quiet
             });
 
-            server.on('listening', () => {
-                request(server)
-                    .get('/pets/1')
-                    .expect(200)
-                    .then(() => server.close(done))
-                    .catch(err => server.close(() => done(err)));
-            });
+            await new Promise(resolve => server.on('listening', resolve));
+            try {
+                const res = await request(server, 'get', '/pets/1');
+                assert.strictEqual(res.status, 200);
+            } finally {
+                server.closeAllConnections();
+                await new Promise(resolve => server.close(resolve));
+            }
         });
 
-        it('falls back to defaults when called with no spec', function (done) {
+        it('falls back to defaults when called with no spec', async function () {
             // No spec: an OS-assigned port (listen(undefined)), the default
             // app name, and console.log for the startup banner.
             const logged = [];
@@ -221,20 +182,13 @@ describe('mockport', function () {
             console.log = (...args) => { logged.push(args.join(' ')); };
             const server = mockPort.listen();
 
-            server.on('listening', () => {
-                console.log = original;
-                server.close(() => {
-                    try {
-                        assert.ok(
-                            logged.some(line => line.includes(':mockport:')),
-                            `expected the default app name in the banner, got: ${logged}`
-                        );
-                        done();
-                    } catch (err) {
-                        done(err);
-                    }
-                });
-            });
+            await new Promise(resolve => server.on('listening', resolve));
+            console.log = original;
+            await new Promise(resolve => server.close(resolve));
+            assert.ok(
+                logged.some(line => line.includes(':mockport:')),
+                `expected the default app name in the banner, got: ${logged}`
+            );
         });
     });
 });

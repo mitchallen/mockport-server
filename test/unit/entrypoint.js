@@ -4,7 +4,8 @@
 // MOCKFILE and PORT environment variables are read. `npm run start:animal`
 // depends on this path.
 
-const assert = require('assert'),
+const { describe, it, before, after } = require('node:test'),
+    assert = require('assert'),
     http = require('http'),
     net = require('net'),
     path = require('path'),
@@ -85,9 +86,8 @@ function stop(server) {
     });
 }
 
-describe('src/index.js', function () {
-
-    this.timeout(20000);
+// Each case spawns a real node process, so allow well past the default.
+describe('src/index.js', { timeout: 20000 }, function () {
 
     describe('default mockfile', function () {
 
@@ -140,6 +140,7 @@ describe('src/index.js', function () {
         // index.js falls back to port 1234. That is a fixed port, so skip
         // rather than fail when something on this machine already holds it.
         let child;
+        let busy = false;
 
         before(function () {
             return new Promise(resolve => {
@@ -148,7 +149,8 @@ describe('src/index.js', function () {
                 probe.listen(1234, () => probe.close(() => resolve(true)));
             }).then(free => {
                 if (!free) {
-                    this.skip();
+                    busy = true;
+                    return;
                 }
                 const env = Object.assign({}, process.env);
                 delete env.PORT;
@@ -166,7 +168,10 @@ describe('src/index.js', function () {
             return stop({ child });
         });
 
-        it('listens on the default port 1234', function () {
+        it('listens on the default port 1234', function (t) {
+            if (busy) {
+                return t.skip('port 1234 is already in use');
+            }
             return get(1234, '/pets/1').then(res => {
                 assert.strictEqual(res.status, 200);
             });
