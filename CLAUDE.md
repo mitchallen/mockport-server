@@ -61,6 +61,25 @@ v0.1.9 (2026-10-20), which took `express` 5.3.0, dropped the dead `diff` /
      pushes multi-arch images to GHCR and Docker Hub, syncs the README, and
      creates the GitHub Release.
   Merge PRs with `--squash`; the history reads `title (#N)`.
+- **Release lessons (v0.1.9, 2026-10-20):**
+  - **PR titles are the release notes.** There is no CHANGELOG; the release
+    job generates "What's Changed" from the PRs merged since the last tag. So
+    give a PR a title that says what users get — v0.1.9's read
+    `bump express to 5.3.0, drop dead overrides, fix README Node version`.
+  - **Bundle fixes into one PR, then release.** v0.1.9 landed three
+    follow-ups (#38) and then a release PR (#39); each runs the required
+    checks (~1 min), and the release PR isn't a Dependabot PR, so merge it by
+    hand once green. Use `make release VERSION=x.y.z` to pin the number.
+  - **`make tag` must run on the pulled squash commit.** The release PR's
+    commit is replaced by its squash merge, so `git pull` on `main` before
+    `make tag`, or the tag lands on a commit that isn't on `main`.
+  - **Verify what shipped, not just that publishing succeeded.** The publish
+    run takes ~1.5 min (tag → images + Release). Afterwards, check both
+    registries are multi-arch
+    (`docker buildx imagetools inspect <image>:x.y.z`) and that the image
+    carries the change:
+    `docker run --rm --entrypoint node ghcr.io/mitchallen/mockport-server:x.y.z -p "require('express/package.json').version + ' / app ' + require('./package.json').version"`
+    printed `5.3.0 / app 0.1.9`.
 - **Deciding whether a release is due:** compare `main` against the latest tag
   and ignore `.github/` and `*.md`. A lockfile change only counts if it moves
   the *production* tree — compare the non-dev entries
