@@ -9,14 +9,14 @@ only as an image.
 
 ## Remaining work
 
-Check `gh issue list` too. Found on 2026-10-20, not yet done:
+Run `gh issue list` for the current state. Nothing is outstanding as of
+v0.1.9 (2026-10-20), which took `express` 5.3.0, dropped the dead `diff` /
+`serialize-javascript` overrides, and fixed the README's Node 20 references.
 
-- `express` 5.2.1 → 5.3.0 is pending (random-server and thing-server took it on
-  2026-10-20). This repo's Dependabot is monthly, so it hasn't proposed it yet.
-- The `overrides` for `diff` and `serialize-javascript` are dead: both came in
-  via mocha, which #35 removed, and `npm explain` now finds neither. Remove them.
-- The README still says Node 20 (the badge and "Requires Node.js 20 or later")
-  though `engines` is `>=22` and CI tests 22 + 24.
+- **`overrides` outlive their reason.** The `diff` and `serialize-javascript`
+  pins were for mocha's tree; when #35 removed mocha they pinned nothing.
+  After removing a dependency, run `npm explain <pkg>` for each override and
+  drop the ones that report "No dependencies found".
 
 ## Conventions
 
