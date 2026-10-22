@@ -1,6 +1,6 @@
 {
   "name": "mockport-server",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "description": "A mock port server for testing HTTP requests.",
   "main": "src/index.js",
