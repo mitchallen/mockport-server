@@ -13,8 +13,12 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # npm ci installs exactly what the lockfile pins; --omit=dev keeps the
-# test toolchain out of the image.
-RUN npm ci --omit=dev && npm cache clean --force
+# test toolchain out of the image. npm, corepack and yarn are then deleted:
+# the server runs on node alone, and the npm CLI bundled in node:*-alpine
+# carries its own dependency tree (undici, brace-expansion, ip-address, ...)
+# that the scheduled Trivy scan flags and our lockfile cannot fix.
+RUN npm ci --omit=dev && npm cache clean --force && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn*
 
 # Bundle app source
 COPY . .
@@ -29,4 +33,6 @@ EXPOSE 1234
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://127.0.0.1:1234/healthz',r=>process.exit(r.statusCode?0:1)).on('error',()=>process.exit(1))"
 
-CMD [ "npm", "start" ]
+# node directly (not `npm start`): npm is gone, and node as PID 1 receives
+# SIGTERM itself on `docker stop`.
+CMD [ "node", "src/index.js" ]
