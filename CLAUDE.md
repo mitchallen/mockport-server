@@ -98,3 +98,27 @@ built container. random-server and the MCP servers update weekly, so their
 Dependabot bumps usually land before this repo's — when one ships a
 production dependency this repo shares (`express`, `cors`), check
 `npm outdated` here.
+
+## Automated releases
+
+`.github/workflows/auto-release.yml` ships Dependabot updates without a
+hand-cut release. Every Wednesday at 15:00 UTC it runs
+`.github/scripts/auto-release.sh plan`. A release is due when `main` has
+changes since the latest tag that reach the image, and every one was committed
+by a bot. CI, docs and test changes and dev-only dependency bumps don't count.
+When a release is due, it opens an `auto-release/vX.Y.Z` PR (patch version bump) with
+auto-merge (squash) on, so it lands only once the required checks pass. When the
+PR merges, the `tag` job tags the merge commit, and the tag push triggers the
+publish workflows. `publish.yml` then creates the GitHub Release.
+
+- **Anything a person changed is left alone.** A human commit touching
+  image-affecting files, or entries under `[Unreleased]` in the changelog,
+  makes `plan` skip with a reason in the run summary. Release those with
+  `make release`.
+- **Run it by hand:** `gh workflow run auto-release.yml -f dry-run=true`
+  reports the decision without opening a PR; drop `dry-run` to release now.
+- **Credentials:** pushes use a GitHub App token (repo variable
+  `RELEASE_APP_CLIENT_ID`, secret `RELEASE_APP_PRIVATE_KEY`), because tags and
+  PRs created with `GITHUB_TOKEN` don't trigger other workflows.
+- **Keep it in sync.** The same script and workflow live in all eight sibling
+  repos; only the `MERGE_METHOD` and `CREATE_RELEASE` env values differ.
