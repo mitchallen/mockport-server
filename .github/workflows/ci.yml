@@ -25,17 +25,23 @@ jobs:
 
       - run: npm ci
 
-      # c8 wraps node --test and fails the step below 100% coverage (the c8 block
-      # in package.json), so this is the test gate and the coverage gate.
+      # Node's built-in test coverage (no c8) fails the step below 100% line,
+      # branch or function coverage of src/ (the thresholds in package.json's
+      # test:coverage), so this is the test gate and the coverage gate.
       - run: npm run test:coverage
 
+      # test:coverage also writes the spec output to coverage/report.txt; copy
+      # just its coverage table into the job summary.
       - name: Coverage summary
-        if: always() && matrix.node-version == '24.x' && hashFiles('coverage/lcov.info') != ''
+        if: always() && matrix.node-version == '24.x' && hashFiles('coverage/report.txt') != ''
         run: |
-          echo '### Coverage' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          npx --no-install c8 report --reporter=text >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo '### Coverage'
+            echo '```'
+            sed -n '/start of coverage report/,/end of coverage report/p' coverage/report.txt \
+              | sed -E 's/^ℹ //; /(start|end) of coverage report/d'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage report
         if: always() && matrix.node-version == '24.x' && hashFiles('coverage/lcov.info') != ''

@@ -169,7 +169,8 @@ With coverage:
 
 	npm run test:coverage
 
-Coverage must stay at **100%** (statements, branches, functions and lines);
+Coverage must stay at **100%** (lines, branches and functions), measured by
+Node's built-in test coverage with no extra dependencies;
 `test:coverage` fails below that. The coverage badge above is static and backed
 by that threshold: if coverage drops, CI (and its badge) goes red.
 

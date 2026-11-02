@@ -2,10 +2,10 @@
 
 A mock HTTP server for testing clients: it serves canned responses from a JSON
 mockfile (`data/` by default, overridable with `MOCKFILE` or a mounted volume).
-Plain JavaScript + Express 5, `node:test` + `c8`, a single-stage Docker image on
-`node:24-alpine` with a `/healthz` `HEALTHCHECK`, published to GHCR + Docker Hub
-via a tag-triggered workflow. `package.json` is `"private": true` — it ships
-only as an image.
+Plain JavaScript + Express 5, `node:test` with its built-in coverage (no dev
+dependencies), a single-stage Docker image on `node:24-alpine` with a
+`/healthz` `HEALTHCHECK`, published to GHCR + Docker Hub via a tag-triggered
+workflow. `package.json` is `"private": true` — it ships only as an image.
 
 ## Remaining work
 
@@ -22,8 +22,11 @@ v0.1.9 (2026-10-20), which took `express` 5.3.0, dropped the dead `diff` /
 
 - **Tests:** `make test` (or `npm test`) runs `node --test` over `test/unit/`;
   requests go through `test/helpers/request.js` (`node:http` + `fetch`, no
-  supertest). `make coverage` is the CI gate: `c8` enforces **100%** on
-  `src/`. `make ci` runs everything CI does, locally.
+  supertest). `make coverage` is the CI gate: Node's built-in test coverage
+  enforces **100%** lines, branches and functions on `src/` (thresholds in
+  `test:coverage`; needs Node >= 22.8). c8 was dropped on 2026-11-02 because
+  its `glob`/`minimatch` tree kept failing `audit` with no upstream fix.
+  `make ci` runs everything CI does, locally.
 - **CI (`ci.yml`):** `test` on Node 22.x and 24.x, `audit`
   (`npm audit --audit-level=moderate`), and `docker`, which runs `make smoke`
   twice — once with the built-in mockfile (`MOUNT=`) and once with
