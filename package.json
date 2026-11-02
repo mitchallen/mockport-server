@@ -11,7 +11,7 @@
     "start": "node src/index.js",
     "start:animal": "MOCKFILE=./data/animal.json node src/index.js",
     "test": "node --test --test-timeout=20000 \"test/unit/**/*.js\"",
-    "test:coverage": "c8 npm test",
+    "test:coverage": "mkdir -p coverage && node --test --test-timeout=20000 --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=coverage/report.txt --test-reporter=lcov --test-reporter-destination=coverage/lcov.info \"test/unit/**/*.js\"",
     "docker:build": "docker build -t mitchallen/mockport-server .",
     "docker:run": "docker run -d -p 7777:1234 -v ${PWD}/test/data:/usr/src/app/data --name mockport-server mitchallen/mockport-server",
     "docker:start": "docker start mockport-server",
@@ -44,19 +44,5 @@
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.3.0"
-  },
-  "devDependencies": {
-    "c8": "^12.0.0"
-  },
-  "c8": {
-    "100": true,
-    "check-coverage": true,
-    "include": [
-      "src/**/*.js"
-    ],
-    "reporter": [
-      "text",
-      "lcov"
-    ]
   }
 }

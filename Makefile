@@ -179,7 +179,7 @@ tag: ## Tag a release locally (VERSION=x.y.z, must match package.json)
 # --------------------------------------------------------------- clean ---
 
 clean: ## Remove test and coverage output
-	rm -rf coverage .nyc_output
+	rm -rf coverage
 
 distclean: clean ## Also remove node_modules and the built image
 	rm -rf node_modules
