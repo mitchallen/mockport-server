@@ -7,7 +7,8 @@ coverage/
 *.lcov
 
 # Credentials - never commit registry auth
-.npmrc
+# .npmrc is committed: it holds only settings (release-age gate,
+# registry). Tokens go in ~/.npmrc or NODE_AUTH_TOKEN, never here.
 
 # Logs
 logs/
